@@ -9,6 +9,8 @@
 # ===========================================================================================================
 import os
 import threading
+import time
+
 from dashscope import Threads
 from tkinter import filedialog
 from tools.AssistantAPI.localKnowledge import Assistant
@@ -23,7 +25,7 @@ from tools.multiple.voice.text2voice import text2voice
 from tools.AssistantAPI.localKnowledge.uploadAndUpdate import upload
 
 # 设置智库书韵助手ID
-Assistant_ID = 'asst_fb805061-c783-443e-98ea-d16f09e6b85c'
+Assistant_ID = 'asst_0f589c33-0f8a-458f-9ad6-6f805a368810'
 
 class ChatApp:
     global Assistant_ID
@@ -32,7 +34,6 @@ class ChatApp:
         self.thread = thread
         self.root.title(title)
         self.root.geometry("930x600")  # 窗口大小保持不变
-        # self.root.resizable(False, False)  # 禁止调整窗口大小
         self.root.configure(bg="#e8f4fa")  # 设置整体背景颜色
         self.assistant = Assistant.Assistant(Assistant_ID)  # 初始化智库书韵助手
 
@@ -64,7 +65,7 @@ class ChatApp:
         self.scrollbar.config(command=self.canvas.yview)
 
         # 创建提示信息
-        self.info_label = tk.Label(root, text="智库书韵正在思考...", font=("楷体", 12), bg="#e8f4fa", fg="#333333")
+        self.info_label = tk.Label(root, text="智库书韵正在思考、回答...", font=("楷体", 12), bg="#e8f4fa", fg="#333333")
         self.info_label.pack(fill=tk.X, pady=(10, 0))  # 放置在输入框上方，并居中
         self.info_label.pack_forget()  # 隐藏Label
         # 创建上传提示信息
@@ -88,7 +89,7 @@ class ChatApp:
         self.upload_button.pack(side=tk.LEFT, padx=(20, 0), pady=10)  # 较靠近输入框
 
         # 消息输入区
-        self.msg_entry = tk.Entry(root, font=("Arial", 12), bg="#ffffff", fg="#333333", relief="flat", borderwidth=2)
+        self.msg_entry = tk.Entry(root, font=("楷体", 12), bg="#ffffff", fg="#333333", relief="flat", borderwidth=2)
         self.msg_entry.pack(fill=tk.X, side=tk.LEFT, padx=(20, 20), pady=10, expand=True, ipady=5)  # 增加左侧填充
 
 
@@ -101,28 +102,31 @@ class ChatApp:
             # 创建一个新的对话框
             dialog = tk.Toplevel(root)
             dialog.title("确认上传文件")
-            dialog.geometry("300x150")  # 设置弹窗大小
 
-            # 标签提示用户
-            label = tk.Label(dialog, text=f"您确定要上传该文件吗？\n文件名:{file_name}\n文件地址:{file_path}\n文件大小:{file_size}字节", font=("仿宋", 12))
-            label.pack(pady=20)
+            # 标签提示用户，设置文本左对齐
+            label = tk.Label(dialog, text=f"您确定要上传该文件吗？\n文件名:{file_name}\n文件地址:{file_path}\n文件大小:{file_size}字节", font=("仿宋", 12), anchor="w")
+            label.pack(pady=20, padx=10, fill="x")  # 设置填充和对齐
 
             # 确定按钮
             def on_confirm():
                 # 上传逻辑
                 # 在此处调用上传接口需要较长时间，因此使用线程异步处理
                 def upload_task():
-                    upload(file_path, file_name, "藏书信息")
+                    def delayShow():
+                        # 用于提示用户上传已完成，0.5秒后隐藏提示消息
+                        time.sleep(0.5)
+                        self.upload_label.pack_forget()  # 隐藏Label
+                    upload(file_path, '用户自定义上传', "藏书信息")
                     # 上传完成后，可以在这里添加一些后续操作，例如提示用户上传成功
-                    self.upload_label.pack_forget()  # 隐藏Label
-                    # 重启智库书韵助手 为其更新知识库dklj24d4gv、z0wwl6o1bf
+                    self.upload_label = tk.Label(root, text="正在上传文件...", font=("楷体", 12), bg="#e8f4fa", fg="#333333")
+                    tempThread = threading.Thread(target=lambda: delayShow())
+
 
                 # 创建并启动新线程
                 self.upload_label.pack(fill=tk.X, pady=(10, 0))  # 显示Label
                 dialog.destroy()  # 关闭弹窗
                 upload_thread = threading.Thread(target=upload_task)
                 upload_thread.start()
-
 
             confirm_button = tk.Button(dialog, text="确定", command=on_confirm)
             confirm_button.pack(side=tk.LEFT, padx=(20, 10), pady=20)
@@ -132,6 +136,14 @@ class ChatApp:
                 dialog.destroy()  # 关闭弹窗
             cancel_button = tk.Button(dialog, text="取消", command=on_cancel)
             cancel_button.pack(side=tk.RIGHT, padx=(10, 20), pady=20)
+
+            # 更新窗口以计算内容大小
+            dialog.update()
+            # 获取按钮的高度
+            button_height = confirm_button.winfo_reqheight()
+            # 根据内容动态调整窗口大小，额外加上按钮的高度和间距
+            dialog.geometry(f"{dialog.winfo_reqwidth()}x{dialog.winfo_reqheight() + button_height + 40}")
+
 
         """上传文件的逻辑"""
         file_path = tk.filedialog.askopenfilename()  # 打开文件对话框

@@ -388,11 +388,17 @@ def upload(file_path:str,kb_name:str,category_id:str='藏书信息'):
         time.sleep(5)
     # 步骤7：创建知识文件索引
     print("正在提交索引任务")
-    print(index_id)
-    submit_response = submit_index(client, workspace_id, index_id)
-    print(submit_response)
-    job_id = submit_response.body.data.id
-    # 步骤8：获取索引任务状态
+    submit_index_add_documents_job_request = bailian_20231229_models.SubmitIndexAddDocumentsJobRequest(
+        index_id=index_id,
+        source_type='DATA_CENTER_CATEGORY',
+        category_ids=[
+            category_id
+        ]
+    )
+    response = client.submit_index_add_documents_job_with_options(workspace_id, submit_index_add_documents_job_request,headers={},runtime=util_models.RuntimeOptions())
+    job_id = response.body.data.id
+
+    # # 步骤8：获取索引任务状态
     print("获取索引任务状态")
     while True:
         get_index_job_status_response = get_index_job_status(client, workspace_id, job_id, index_id)
@@ -401,11 +407,11 @@ def upload(file_path:str,kb_name:str,category_id:str='藏书信息'):
         if status == 'COMPLETED':
             break
         time.sleep(5)
-    print("知识库创建成功！")
+    print("数据添加成功！")
 
 
 
 
 if __name__ == '__main__':
-    # upload('D:/Desktop/瓦尔登湖.txt','藏书信息')
-    create_knowledge('D:/Desktop/真我GT5Pro.txt')
+    upload('D:/Desktop/瓦尔登湖.txt','藏书信息')
+    # create_knowledge('D:/Desktop/真我GT5Pro.txt')

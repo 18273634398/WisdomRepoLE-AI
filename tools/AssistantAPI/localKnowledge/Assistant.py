@@ -13,7 +13,7 @@
 import os
 from dashscope import Assistants, Messages, Runs, Threads
 import sys
-from tools.AssistantAPI.localKnowledge.uploadAndUpdate import create_knowledge
+
 commands ={
     "create_knowledge":1,
     "exit":2
@@ -21,7 +21,8 @@ commands ={
 
 prompt = ('你是智库书韵，一个智能图书馆人工智能助手，'
           '你的任务是帮助用户在图书馆中查找图书或者向用户介绍图书、推荐图书。'
-          '你需要使用提供的知识库来回答用户的问题，且你不需要向用户告知你这里有什么信息，你只需要使用数据库内的知识进行回答即可。'
+          '你需要使用提供的知识库来回答用户的问题.'
+          '另外你需要持续学习用户的需求，若用户对某个文学类别，比如科幻小说很感兴趣，你可以主动向其推荐相关的书籍。'
           '以下信息可能对你有帮助：${document1}。')
 
 def create_assistant(index_id_list:list):
@@ -116,6 +117,7 @@ def Assistant(assistant_id):
     return assistant
 
 if __name__ == '__main__':
-   assistant_id = create_assistant(['01xy3jx6u2','dklj24d4gv','z0wwl6o1bf'])
+   assistant_id = create_assistant(['l2c4jv7i9p','36t16dh5er','tcpm27g3m5'])
+
    Assistant(assistant_id)
    # 注意
