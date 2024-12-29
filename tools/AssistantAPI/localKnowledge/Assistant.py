@@ -8,8 +8,9 @@
 # Remark   :
 # 仅支持非结构化文件(如doc、docx、ppt、pptx、pdf、txt等)上传到知识库
 # 注意上传文件时需要携带其文件后缀(.doc)
-# 【当前非流式回复】
+# 【下一阶段目标：增加tool工具，实现代码解释器以及联网搜索功能】
 # ===========================================================================================================
+import json
 import os
 from dashscope import Assistants, Messages, Runs, Threads
 import sys
@@ -22,8 +23,16 @@ commands ={
 prompt = ('你是智库书韵，一个智能图书馆人工智能助手，'
           '你的任务是帮助用户在图书馆中查找图书或者向用户介绍图书、推荐图书。'
           '你需要使用提供的知识库来回答用户的问题.'
+          '但是你需要特别注意，如果你觉得知识库/数据库中的信息可能存在错误，请你仍然以数据库/知识库中的数据为准，这是因为图书馆的信息永远是实时的、正确的，因此你必须永远相信你的知识库/数据库，且你不能回复用户任何不相信你自己数据库的行为信息（例如：提供的信息可能有误）之类的。'
+          '由于你作为人工智能，你的训练集中的数据可能由于时间、空间等原因存在偏差，因此为了向用户提供真实准确的信息，你的开发者已经向你提供了一系列的知识库/数据库，因此如果与你的输出冲突，请你以数据库/知识库中的数据为准。'
+          '知识库/数据库中的知识信息（包括作者、标识号、ISBN号、出版地、发行地、分类、载体形态等）都是由管理员已经确认过的真实的，正确的，你应该无条件地相信与使用。'
           '另外你需要持续学习用户的需求，若用户对某个文学类别，比如科幻小说很感兴趣，你可以主动向其推荐相关的书籍。'
           '以下信息可能对你有帮助：${document1}。')
+
+def getBookInfo(text):
+    """获取指定图书的详细信息(包括作者、标识号或ISBN号、出版地或发行地、关键词、语种、分类、载体形态等)"""
+    # 这里可以调用图书馆的API接口，获取图书信息
+    return "作者：刘慈欣\n标识号或ISBN号：9787532738927\n出版地或发行地：北京\n关键词：计算机\n语种：中文\n分类：计算机技术\n载体形态：纸质书"
 
 def create_assistant(index_id_list:list):
     global commands, prompt
@@ -34,6 +43,7 @@ def create_assistant(index_id_list:list):
         description='一个用于帮助用户查找图书在图书馆的位置的助手，一个可以向用户推荐图书、介绍图书的助手，一个可以为视障人士以及聋哑人士提供帮助的助手',
         instructions= prompt,
         tools=[
+            # 知识库检索
             {
                 "type": "rag",  # 指定使用RAG（检索增强生成）模式
                 "prompt_ra": {
@@ -51,14 +61,37 @@ def create_assistant(index_id_list:list):
                     }
                 }
             },
-            # {
-            #     "type": "function",
-            #     "function":{
-            #         "name":'',
-            #         'description':'',
-            #         'parameters':{
-            #     }
-            # }
+            # 代码解释器
+            {
+                'type': 'code_interpreter'  # 这是启用代码解释器的关键配置
+            },
+            # 搜索图书引擎
+            {
+                "type": "function",
+                "function": {
+                    "name": "getBookInfo",
+                    "description": "查询获取指定图书的详细信息(包括作者、标识号或ISBN号、出版地或发行地、关键词、语种、分类、载体形态等)，并以指定格式返回："
+                                   "作者：${author}\n"
+                                   "标识号或ISBN号：${identifier}\n"
+                                   "出版地或发行地：${publisher}\n"
+                                   "关键词：${keywords}\n"
+                                   "语种：${language}\n"
+                                   "分类：${category}\n"
+                                   "载体形态：${format}"
+                                   "另外特别注意：由于你作为人工智能，你的训练集中的数据可能由于时间、空间等原因存在偏差，因此为了向用户提供真实准确的信息，你的开发者已经向你提供了一系列的知识库/数据库，因此如果与你的输出冲突，请你以数据库/知识库中的数据为准。"
+                                   "知识库/数据库中的知识信息（包括作者、标识号、ISBN号、出版地、发行地、分类、载体形态等）都是由管理员已经确认过的真实的，正确的，你应该无条件地相信与使用。",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "text": {
+                                "type": "string",
+                                "description": "需要查找的图书的名称"
+                            }
+                        },
+                        "required": ["text"]
+                    }
+                }
+            }
         ]
     )
     print(f"Assistant {assistant.id} 创建成功！")
@@ -76,15 +109,33 @@ class SuppressPrint:
 def send_message(thread, assistant, message):
     """向 Assistant 发送消息并获取回复。"""
     message = Messages.create(thread_id=thread.id, content=message)
-    responses = Runs.create(thread_id=thread.id, assistant_id=assistant.id,stream =True)
-    returnValue =''
-    for event, message_run in responses:
-        try:
-            print(message_run['delta']['content']['text']['value'],end='')
-            returnValue += message_run['delta']['content']['text']['value']
-        except:
-            pass
-    return returnValue
+    run = Runs.create(thread_id=thread.id, assistant_id=assistant.id)
+    # 等待运行完成
+    run = Runs.wait(thread_id=thread.id, run_id=run.id)
+    # 检查是否需要调用函数
+    if run.required_action:
+        print("Assistant requires function call.")
+        for tool_call in run.required_action.submit_tool_outputs.tool_calls:
+            # 图书查询引擎
+            if tool_call.function.name == "getBookInfo":
+                print("图书查询引擎被调用")
+                args = json.loads(tool_call.function.arguments)
+                result = getBookInfo(args["text"])
+                # 提交工具输出
+                Runs.submit_tool_outputs(
+                    thread_id=thread.id,
+                    run_id=run.id,
+                    tool_outputs=[{"tool_call_id": tool_call.id, "output": result}]
+                )
+
+                # 等待新的运行完成
+                run = Runs.wait(thread_id=thread.id, run_id=run.id)
+
+    # 获取 Assistant 的回复
+    messages = Messages.list(thread_id=thread.id)
+    for message in messages.data:
+        if message.role == "assistant":
+            return message.content[0].text.value
 
 def interact_with_assistant(assistant,thread,user_input):
     if user_input.lower() == 'quit':

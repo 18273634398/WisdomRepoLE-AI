@@ -10,7 +10,6 @@
 import os
 import threading
 import time
-
 from dashscope import Threads
 from tkinter import filedialog
 from tools.AssistantAPI.localKnowledge import Assistant
@@ -25,7 +24,7 @@ from tools.multiple.voice.text2voice import text2voice
 from tools.AssistantAPI.localKnowledge.uploadAndUpdate import upload
 
 # 设置智库书韵助手ID
-Assistant_ID = 'asst_0f589c33-0f8a-458f-9ad6-6f805a368810'
+Assistant_ID = 'asst_4732e230-31a5-40b0-ac6d-9c8cae5d3f57'
 
 class ChatApp:
     global Assistant_ID
@@ -33,7 +32,7 @@ class ChatApp:
         self.root = root
         self.thread = thread
         self.root.title(title)
-        self.root.geometry("930x600")  # 窗口大小保持不变
+        self.root.geometry("1000x600")  # 窗口大小保持不变
         self.root.configure(bg="#e8f4fa")  # 设置整体背景颜色
         self.assistant = Assistant.Assistant(Assistant_ID)  # 初始化智库书韵助手
 
@@ -50,15 +49,15 @@ class ChatApp:
         self.chat_topic.pack(fill=tk.X)
 
         # 创建聊天区域及滚动条
-        self.chat_area = Frame(root, width=800)  # 设置聊天区域的宽度为800px
+        self.chat_area = Frame(root, width=1000)  # 设置聊天区域的宽度为800px
         self.chat_area.pack(padx=20, pady=5, fill=tk.BOTH, expand=True)
 
         # 创建滚动条
         self.scrollbar = Scrollbar(self.chat_area)
         self.scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
-        # 创建一个Canvas用于放置消息框
-        self.canvas = tk.Canvas(self.chat_area, bg="#ffffff", yscrollcommand=self.scrollbar.set, width=800)  # 设置Canvas的宽度为800px
+        # 创建一个Canvas用于放置消息框Canvas的宽度为800px
+        self.canvas = tk.Canvas(self.chat_area, yscrollcommand=self.scrollbar.set, width=1000)
         self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         # 将滚动条与Canvas连接
@@ -92,10 +91,15 @@ class ChatApp:
         self.msg_entry = tk.Entry(root, font=("楷体", 12), bg="#ffffff", fg="#333333", relief="flat", borderwidth=2)
         self.msg_entry.pack(fill=tk.X, side=tk.LEFT, padx=(20, 20), pady=10, expand=True, ipady=5)  # 增加左侧填充
 
+        # 绑定回车事件
+        self.msg_entry.bind("<Return>", self.send_message)
 
         # 发送按钮
         self.send_button = tk.Button(root, text="发送", command=self.send_message, bg="#d1e8ff", fg="#333333", relief="flat", borderwidth=2)
         self.send_button.pack(side=tk.RIGHT, padx=20, pady=10)
+        self.root.update_idletasks()  # 强制更新窗口布局
+
+
 
     def upload_file(self):
         def show_dialog():
@@ -112,14 +116,9 @@ class ChatApp:
                 # 上传逻辑
                 # 在此处调用上传接口需要较长时间，因此使用线程异步处理
                 def upload_task():
-                    def delayShow():
-                        # 用于提示用户上传已完成，0.5秒后隐藏提示消息
-                        time.sleep(0.5)
-                        self.upload_label.pack_forget()  # 隐藏Label
                     upload(file_path, '用户自定义上传', "藏书信息")
                     # 上传完成后，可以在这里添加一些后续操作，例如提示用户上传成功
-                    self.upload_label = tk.Label(root, text="正在上传文件...", font=("楷体", 12), bg="#e8f4fa", fg="#333333")
-                    tempThread = threading.Thread(target=lambda: delayShow())
+                    self.upload_label.pack_forget()  # 隐藏Label
 
 
                 # 创建并启动新线程
@@ -179,7 +178,8 @@ class ChatApp:
     def async_receive_message(self, msg):
         response = Assistant.send_message(self.thread, self.assistant, msg)
         self.receive_message(response)
-        text = text2voice(response)
+        # 语音回复
+        # text = text2voice(response)
         self.toggle_info_label_visibility(False)
 
     def receive_message(self, msg):
@@ -212,7 +212,7 @@ class ChatApp:
         bubble_frame.grid(row=0, column=1 if side == "left" else 0, sticky="n", padx=(5, 0) if side == "left" else (0, 5))  # 气泡固定在顶部
 
         # 动态计算wraplength
-        wraplength = (self.root.winfo_width()-150) /2
+        wraplength = (self.root.winfo_width()-200) /2
 
         # 判断是否为Markdown文本
         if self.is_markdown(msg):
@@ -221,7 +221,6 @@ class ChatApp:
         else:
             # 普通文本
             message_label = tk.Label(bubble_frame, text=msg, bg=self.left_bubble_color if side == "left" else self.right_bubble_color, fg="#333333", font=("楷体", 16), padx=10, pady=5, wraplength=wraplength, justify="left")  # 修改为楷体，并设置左对齐
-
         message_label.pack(anchor='w')  # 确保文本左对齐
 
         message_frame.pack(anchor='w' if side == "left" else 'e', padx=5, pady=5)  # 根据消息方向对齐
