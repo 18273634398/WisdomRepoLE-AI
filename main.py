@@ -9,22 +9,20 @@
 # ===========================================================================================================
 import os
 import threading
-import time
 from dashscope import Threads
 from tkinter import filedialog
-from tools.AssistantAPI.localKnowledge import Assistant
+from tools.AssistantAPI import Assistant
 import tkinter as tk
 from tkinter import Frame, Scrollbar
 from PIL import Image, ImageTk
 from datetime import datetime
 import markdown
 from tkhtmlview import HTMLText
-from tools.multiple.voice.text2voice import text2voice
 
-from tools.AssistantAPI.localKnowledge.uploadAndUpdate import upload
+from tools.AssistantAPI.localKnowledge.uploadFile import upload
 
 # 设置智库书韵助手ID
-Assistant_ID = 'asst_4732e230-31a5-40b0-ac6d-9c8cae5d3f57'
+Assistant_ID = 'asst_918a8802-a7e4-4063-9705-f003af43e210'
 
 class ChatApp:
     global Assistant_ID
@@ -243,8 +241,7 @@ if __name__ == "__main__":
     root = tk.Tk()
     thread = Threads.create()
     app = ChatApp(root, thread,title="聊天界面", subject="智库书韵")
-    app.receive_message("                                                                        \n"
-                        "你好，欢迎使用智库书韵！有什么图书问题，可以随时咨询我。\n比如：\n1. 如何使用智库书韵？\n2. 《三体》这本书怎么样？\n3.鲁尚武是谁？")
+    app.receive_message("你好，欢迎使用智库书韵！有什么图书问题，可以随时咨询我。\n比如：\n1. 如何使用智库书韵？\n2. 《三体》这本书怎么样？\n3.鲁尚武是谁？")
     root.mainloop()
 
 
