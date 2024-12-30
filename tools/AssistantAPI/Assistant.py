@@ -13,8 +13,9 @@ import sys
 
 from dashscope import Assistants, Messages, Runs
 
-from tools.AssistantAPI.localKnowledge.getBookInfo import getBookInfo
-from tools.AssistantAPI.localKnowledge.format import formatBookInfo
+from tools.AssistantAPI.tools.getBookInfo import getBookInfo
+from tools.AssistantAPI.tools.format import formatBookInfo
+from tools.AssistantAPI.tools.learnByWeb import learnByWeb
 
 
 commands = {
@@ -83,24 +84,24 @@ def create_assistant(index_id_list: list):
                     }
                 }
             },
-            # # 搜索图书引擎
-            # {
-            #     "type": "function",
-            #     "function": {
-            #         "name": "formatBookInfo",
-            #         "description": "用于对获取到的非格式化数据进行格式化，方便模型调用",
-            #         "parameters": {
-            #             "type": "object",
-            #             "properties": {
-            #                 "text": {
-            #                     "type": "string",
-            #                     "description": "未格式化的数据"
-            #                 }
-            #             },
-            #             "required": ["text"]
-            #         }
-            #     }
-            # }
+            # 搜索图书引擎
+            {
+                "type": "function",
+                "function": {
+                    "name": "learnByWeb",
+                    "description": "当用户指定需要联网搜索时，调用该函数，从互联网上获取相关信息，并将其格式化后返回给用户。",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "keyword": {
+                                "type": "string",
+                                "description": "未格式化的数据"
+                            }
+                        },
+                        "required": ["keyword"]
+                    }
+                }
+            }
         ]
     )
     print(f"Assistant {assistant.id} 创建成功！")
@@ -129,7 +130,7 @@ def send_message(thread, assistant, message):
         for tool_call in run.required_action.submit_tool_outputs.tool_calls:
             # 图书查询引擎
             if tool_call.function.name == "getBookInfo":
-                print("图书查询引擎被调用")
+                print("[图书查询引擎]被调用")
                 args = json.loads(tool_call.function.arguments)
                 doc = getBookInfo(1,args["text"])
                 result = f"从数据库中获取到的图书信息为：{doc}请据此回复用户的查询请求。"
@@ -142,21 +143,21 @@ def send_message(thread, assistant, message):
                 print("[图书查询引擎]输出提交成功")
                 # 等待新的运行完成
                 run = Runs.wait(thread_id=thread.id, run_id=run.id)
-            # elif tool_call.function.name == "formatBookInfo":
-            #     print("图书信息格式化引擎被调用")
-            #     args = json.loads(tool_call.function.arguments)
-            #     result = formatBookInfo(args["text"])
-            #     print(result)
-            #     # 提交工具输出
-            #     Runs.submit_tool_outputs(
-            #         thread_id=thread.id,
-            #         run_id=run.id,
-            #         tool_outputs=[{"tool_call_id": tool_call.id, "output": result}]
-            #     )
-            #     print("图书格式化引擎输出提交成功")
-            #     # 等待新的运行完成
-            #     run = Runs.wait(thread_id=thread.id, run_id=run.id)
-            #     print(f"新的运行完成，状态：{run.status}")
+            elif tool_call.function.name == "learnByWeb":
+                print("[联网搜索引擎]被调用")
+                args = json.loads(tool_call.function.arguments)
+                doc = learnByWeb(args["keyword"])
+                result = f"从互联网学习到的与{args['keyword']}有关的信息为：{doc}请据此回复用户的查询请求。"
+                # 提交工具输出
+                Runs.submit_tool_outputs(
+                    thread_id=thread.id,
+                    run_id=run.id,
+                    tool_outputs=[{"tool_call_id": tool_call.id, "output": result}]
+                )
+                print("[联网搜索引擎]输出提交成功")
+                # 等待新的运行完成
+                run = Runs.wait(thread_id=thread.id, run_id=run.id)
+                print(f"新的运行完成，状态：{run.status}")
 
     # 获取 Assistant 的回复
     messages = Messages.list(thread_id=thread.id)

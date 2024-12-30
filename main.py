@@ -19,10 +19,10 @@ from datetime import datetime
 import markdown
 from tkhtmlview import HTMLText
 
-from tools.AssistantAPI.localKnowledge.uploadFile import upload
+from tools.AssistantAPI.functions.uploadFile import upload
 
 # 设置智库书韵助手ID
-Assistant_ID = 'asst_918a8802-a7e4-4063-9705-f003af43e210'
+Assistant_ID = 'asst_62b7eb6a-2661-4244-97b7-d1f92845cd07'
 
 class ChatApp:
     global Assistant_ID

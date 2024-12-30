@@ -2,7 +2,7 @@
 # Author    ：LuShangWu
 # Date      ：2024-12-29
 # Version   ：1.0
-# Description：用于格式化数据
+# Description：用于
 # Copyright  ：LuShangWu
 # License   ：MIT
 # Remark   :
